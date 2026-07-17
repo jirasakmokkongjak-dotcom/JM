@@ -9,22 +9,17 @@ import warnings
 warnings.filterwarnings('ignore')
 
 # ============================================
-# 1. โหลดข้อมูล (14 คอลัมน์ตามข้อมูลจริง)
+# 1. โหลดข้อมูล (ใช้ header=0 เพราะไฟล์มี header อยู่แล้ว)
 # ============================================
 print("📊 กำลังโหลดข้อมูล...")
 
-column_names = [
-    'person_age', 'person_gender', 'person_education', 'person_income',
-    'person_emp_exp', 'person_home_ownership', 'loan_amnt', 'loan_intent',
-    'loan_int_rate', 'loan_percent_income', 'cb_person_cred_hist_length',
-    'credit_score', 'previous_loan_defaults_on_file', 'loan_status'
-]
-
-df = pd.read_csv('loan_data.csv', header=None, names=column_names)
+df = pd.read_csv('loan_data.csv', header=0)
 
 print(f"✅ โหลดข้อมูลสำเร็จ: {df.shape[0]} แถว, {df.shape[1]} คอลัมน์")
 print("\n📋 ตัวอย่างข้อมูล:")
 print(df.head())
+print("\n📋 ชื่อคอลัมน์:")
+print(df.columns.tolist())
 
 # ============================================
 # 2. สำรวจข้อมูล
@@ -38,6 +33,19 @@ print(df.isnull().sum())
 # 3. เตรียมข้อมูล (Preprocessing)
 # ============================================
 print("\n🔧 กำลังเตรียมข้อมูล...")
+
+# ตรวจสอบค่าของ loan_status ก่อนแปลง
+print("\n🎯 ค่าเริ่มต้นของ loan_status:")
+print(df['loan_status'].value_counts())
+
+# แปลง loan_status ให้เป็นตัวเลข (กรณีที่เป็น string '0', '1')
+df['loan_status'] = pd.to_numeric(df['loan_status'], errors='coerce')
+
+# ลบแถวที่มีค่า NaN ออก
+df = df.dropna()
+
+print("\n🎯 ค่าของ loan_status หลังแปลง:")
+print(df['loan_status'].value_counts())
 
 # Gender: male=1, female=0
 df['person_gender'] = df['person_gender'].map({'male': 1, 'female': 0})
@@ -68,21 +76,17 @@ df['loan_intent'] = le_intent.fit_transform(df['loan_intent'].astype(str))
 # Previous Loan Defaults: Yes=1, No=0
 df['previous_loan_defaults_on_file'] = df['previous_loan_defaults_on_file'].map({'Yes': 1, 'No': 0})
 
-# loan_status เป็น 0/1 อยู่แล้ว (ไม่ต้องแปลง)
-print("\n🎯 ค่าของ loan_status:")
-print(df['loan_status'].value_counts())
-
 print("✅ เตรียมข้อมูลสำเร็จ")
 
 # ============================================
 # 4. แยก features และ target
 # ============================================
 X = df.drop('loan_status', axis=1)
-y = df['loan_status']
+y = df['loan_status'].astype(int)
 
 print(f"\n📊 Features: {X.shape}")
 print(f"🎯 Target: {y.shape}")
-print(f"\n📈 การกระจายของ Target:")
+print(f"\n การกระจายของ Target:")
 print(y.value_counts())
 
 # ============================================
@@ -143,16 +147,14 @@ joblib.dump(svm_model, 'svm_loan_model.pkl')
 joblib.dump(scaler, 'scaler.pkl')
 joblib.dump(le_intent, 'label_encoder_intent.pkl')
 
-# บันทึก feature names
 feature_names = X.columns.tolist()
 joblib.dump(feature_names, 'feature_names.pkl')
 
-# บันทึก classes ของ loan_intent (สำหรับใช้ใน app.py)
 intent_classes = le_intent.classes_.tolist()
 joblib.dump(intent_classes, 'intent_classes.pkl')
 
 print("✅ บันทึกโมเดลสำเร็จ!")
-print("\n📁 ไฟล์ที่บันทึก:")
+print("\n ไฟล์ที่บันทึก:")
 print("  - svm_loan_model.pkl")
 print("  - scaler.pkl")
 print("  - label_encoder_intent.pkl")
